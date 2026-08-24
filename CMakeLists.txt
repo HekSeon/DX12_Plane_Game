@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
-project(UcakOyunu CXX)
+set(CMAKE_SYSTEM_VERSION "10.0.26100.0" CACHE STRING "" FORCE)
+project(DX12PlaneGame CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,8 +9,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "src/*.h" "src/*.hpp")
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src FILES ${SOURCES} ${HEADERS})
+
 add_executable(${PROJECT_NAME} WIN32
-    src/main.cpp
+    ${SOURCES}
+    ${HEADERS}
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

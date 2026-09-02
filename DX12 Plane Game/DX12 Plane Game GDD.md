@@ -1,0 +1,12 @@
+- **EngineSystem** – motor gücü (throttle), pervane RPM'i, yakıt tüketimi
+- **FuelSystem** – yakıt göstergesi, motor gücüyle orantılı tüketim, yakıt biterse motor kesilmesi
+- **FlightModel / LiftSystem** – senin tarif ettiğin mantık burada:
+    - Hız eşiği (stall speed) altında + burun yukarıdaysa → düşüş (stall durumu)
+    - Hız eşiği üstünde + burun yukarıdaysa → yükselme
+    - Motor gücü yüksek + burun yukarı + hız yetersiz → havalanamama, düşme
+    - Bu aslında **pitch (burun açısı) + speed + thrust** üçlüsünün bir fonksiyonu, gerçek uçuş simlerinde "angle of attack" mantığına yakın basitleştirilmiş hali
+- **InputSystem** – kalkış, burun kontrolü, throttle kontrolü
+- **CameraSystem** – muhtemelen 3rd person takip kamerası
+- **WorldGenSystem** – ilerledikçe oluşan random dünya, chunk-based olabilir
+- **AirportSystem** – pist, spawn/respawn noktaları, iniş algılama (landing gear + hız + açı kontrolü)
+- **HUD/InstrumentSystem** – yakıt göstergesi, hız göstergesi, irtifa göstergesi

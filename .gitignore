@@ -52,3 +52,5 @@ vcpkg_installed/
 # Diğer
 .DS_Store
 Thumbs.db
+# OBJ models are source assets, not compiler outputs.
+!data/**/*.obj

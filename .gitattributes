@@ -1,0 +1,6 @@
+# Keep Windows source files consistent in the working tree.
+*.cpp text eol=crlf
+*.h text eol=crlf
+*.hpp text eol=crlf
+*.hlsl text eol=crlf
+CMakeLists.txt text eol=crlf

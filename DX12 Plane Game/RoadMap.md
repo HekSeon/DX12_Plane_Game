@@ -7,7 +7,6 @@ kanban-plugin: board
 ## hold
 
 - [ ] Core Engine
-- [ ] Renderer / Pipeline
 - [ ] Shader System
 - [ ] WorldGenSystem
 - [ ] CameraSystem
@@ -21,6 +20,7 @@ kanban-plugin: board
 
 ## in development
 
+- [ ] Renderer / Pipeline
 
 
 ## testing

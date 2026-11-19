@@ -1,4 +1,5 @@
 #include "WorldGenerator.h"
+#include "Airport.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -46,9 +47,10 @@ float WorldGenerator::Height(FXMVECTOR direction) const
     float height = continent * 320.f - 35.f + std::max(0.f, continent + .1f) * (180.f * mountains + 95.f * hills);
     // Havalimanının çevresini düzleştir; kenarları araziye yumuşak bağla.
     // Flatten the airfield and blend its edges into the terrain.
-    if (n.y > .9f)
+    for (int airport = 0; airport < Airport::Count; ++airport)
     {
-        float x = Radius * n.x / n.y, z = Radius * n.z / n.y;
+        auto local = Airport::LocalPosition(direction * Radius, airport, m_seed);
+        float x = XMVectorGetX(local), z = XMVectorGetZ(local);
         float edge = std::max((std::abs(x) - 200.f) / 160.f, (std::abs(z) - 760.f) / 220.f);
         height = std::lerp(24.f, height, Smooth(edge));
     }
@@ -56,14 +58,9 @@ float WorldGenerator::Height(FXMVECTOR direction) const
 }
 float WorldGenerator::GroundHeight(FXMVECTOR direction) const
 {
-    auto n = XMVector3Normalize(direction);
-    if (XMVectorGetY(n) > .9f)
-    {
-        float x = Radius * XMVectorGetX(n) / XMVectorGetY(n), z = Radius * XMVectorGetZ(n) / XMVectorGetY(n);
-        if (std::abs(x) < 32.f && std::abs(z) < 640.f)
-            return 26.f;
-    }
-    return std::max(0.f, Height(n));
+    if (Airport::OnPavement(direction, m_seed))
+        return 26.f;
+    return std::max(0.f, Height(direction));
 }
 
 XMVECTOR WorldGenerator::CubeDirection(int face, float u, float v)

@@ -2,7 +2,7 @@
 
 DirectX 12 flight prototype with a spherical world (5 km radius), procedural mountains,
 sea, a third-person chase camera, basic throttle/stall behavior and terrain contact.
-Flight starts on approach to the airfield, safely above the local terrain. This is an arcade flight model, not an aerodynamic simulator.
+Flight starts stopped on the departure airport runway. This is an arcade flight model, not an aerodynamic simulator.
 
 ## Build and run
 
@@ -18,9 +18,9 @@ cmake --build build --config Debug
 
 - W / Up: nose down; S / Down: nose up
 - A / Left, D / Right: bank and turn
-- Shift: increase throttle; Ctrl: decrease throttle
-- R: return to the airfield approach and reset speed/fuel
-- H: place the aircraft on the runway with the engine at idle
+- Shift: increase throttle; Ctrl: cut power and brake on the ground, decrease throttle in flight
+- R: restart the entire route, clearing completed flights and restoring fuel
+- E: hold to refuel while parked at idle in a yellow F bay
 - Space: ground brakes
 - F: toggle fog
 - M: mute/unmute audio
@@ -98,8 +98,8 @@ The local terrain is generated before the first frame. This is bounded streaming
 a finite spherical planet; it is not an infinite flat world.
 
 The airfield has a curved 1.28 km runway, markings, a taxiway, apron, two hangars and
-control tower. `H` is a quick way to try takeoff: hold Shift to raise throttle, then
-pull up with S after passing roughly 200 km/h. Ground brakes use Space. The current
+control tower. To take off, hold Shift to raise throttle, then
+pull up with S after passing roughly 200 km/h. Ground brakes use Ctrl or Space. The current
 arcade ground contact follows terrain/runway height; buildings have no collision yet.
 
 Fog starts at 650 m and reaches the sky color at 2.4 km. Adjust `Fog` in `game/game.h`.
@@ -166,3 +166,46 @@ It was checked from 640x360 to 3840x2160 using an offscreen layout preview.
 
 This version was built at `build/hud/Release/DX12PlaneGame.exe` to keep the executable
 paths used by earlier running builds available.
+
+## Nearby airports and refueling
+
+ALPHA and BRAVO use seed-based random positions and runway headings, 3.5-5.5 km apart. Both have flattened terrain,
+a runway, taxiway, apron and a yellow fuel-service bay with an F marking. The same
+airport frames drive mesh placement, terrain flattening and ground contact.
+
+The mission assigns the navigation target. The HUD lists both airport distances,
+shows a turn direction for the assigned target and marks airports in the forward view.
+The fuel panel shows remaining fuel, an estimated cruise range and refueling status.
+
+To refuel, taxi onto the yellow F bay on the apron, stop below 1 m/s, reduce throttle
+to idle with Ctrl, then hold E. Ctrl cuts power and brakes on the ground; Space is an additional brake key. Refueling is blocked
+while airborne, outside the bay, moving too fast or above idle power. An empty tank
+takes roughly 8.3 seconds to fill. Both airports provide the same service.
+
+Fuel consumption is configured in `src/player/fuel.h`. A full tank has 100 units;
+full throttle consumes 0.45 units/second. The offscreen check covered an 8 km round trip
+at 80 m/s plus 60 seconds of approach time at 65% throttle, leaving 53.2% fuel.
+Actual fuel use depends on speed, throttle and time spent maneuvering. HUD range is
+an estimate using 100 m/s and 65% throttle.
+
+Latest build for this feature: `build/airports/Release/DX12PlaneGame.exe`.
+
+## Random airport missions and ground braking
+
+Airport position, heading and separation are deterministic for each world seed.
+A new game chooses a fresh seed. ALPHA is the starting runway and BRAVO is the first
+mandatory destination. Fly to the assigned airport, land, taxi into its yellow F bay,
+stop and reduce throttle to idle. The flight is then counted and the return destination
+is assigned automatically. Passing overhead, parking at the wrong airport or remaining
+in the same bay cannot complete another flight.
+
+The HUD shows the current flight number, locked destination, distance and a completion
+notice. Manual destination switching with N and teleporting with H are disabled.
+R restarts the route from ALPHA and clears its progress, so restarting cannot skip a leg.
+
+Holding Ctrl on the ground immediately cuts engine power and applies wheel brakes.
+In flight, Ctrl keeps its throttle-reduction behavior and does not apply wheel brakes.
+Hold E while parked at idle in a fuel bay to replenish the tank. The distance limit
+keeps both airport legs within the existing fuel budget, including approach reserves.
+
+Latest build: `build/routes/Release/DX12PlaneGame.exe`.

@@ -3,6 +3,7 @@
 #include "world/WorldGenerator.h"
 #include "world/Airport.h"
 #include "world/DayNightCycle.h"
+#include "FlightRoute.h"
 #include <map>
 #include <vector>
 
@@ -28,6 +29,10 @@ class Game
     const DayNightCycle &TimeOfDay() const { return m_dayNight; }
     Daylight Lighting() const { return m_dayNight.Evaluate(m_player.Position()); }
     float SeaTime() const { return m_seaTime; }
+    int TargetAirport() const { return m_route.Target(); }
+    unsigned CompletedFlights() const { return m_route.Completed(); }
+    bool ArrivalNotice() const { return m_arrivalTimer > 0; }
+    float TargetBearing() const;
     bool SoundEnabled() const { return m_soundEnabled; }
 
   private:
@@ -39,6 +44,9 @@ class Game
     std::map<ChunkId, MeshData> m_chunks;
     std::vector<ChunkId> m_requested;
     std::vector<AirportPart> m_airport;
+    FlightRoute m_route;
+    bool m_restartDown = false;
+    float m_arrivalTimer = 0;
     float m_streamTimer = 0, m_titleTimer = 0, m_seaTime = 0;
     bool m_fogDown = false, m_muteDown = false, m_soundEnabled = true, m_timeDown = false;
 };

@@ -1,5 +1,6 @@
 #include "player.h"
 #include "world/WorldGenerator.h"
+#include "world/Airport.h"
 #include <algorithm>
 #include <cmath>
 using namespace DirectX;
@@ -9,19 +10,24 @@ Player::Player()
 }
 void Player::Reset(bool onRunway, const WorldGenerator *world)
 {
-    m_position = WorldGenerator::AirportPoint(0, onRunway ? -500.f : -1100.f, onRunway ? 30.f : 180.f);
+    auto airportFrame = Airport::Frame(0, world ? world->Seed() : 0);
+    m_position = XMVector3TransformNormal(
+        WorldGenerator::AirportPoint(0, onRunway ? -500.f : -1100.f, onRunway ? 30.f : 180.f), airportFrame);
     if (world && !onRunway)
     {
         auto direction = XMVector3Normalize(m_position);
         m_position = direction * (WorldGenerator::Radius + std::max(180.f, world->GroundHeight(direction) + 160.f));
     }
     auto up = XMVector3Normalize(m_position);
-    auto right = XMVector3Normalize(XMVector3Cross(up, XMVectorSet(0, 0, 1, 0)));
+    auto right = XMVector3Normalize(XMVector3Cross(up, airportFrame.r[2]));
     m_forward = XMVector3Normalize(XMVector3Cross(right, up));
     m_speed = onRunway ? 0.f : 100.f;
     m_throttle = onRunway ? 0.f : .65f;
     m_bank = 0;
-    m_fuel = 100;
+    m_fuel.Reset();
+    m_refueling = false;
+    m_braking = false;
+    m_serviceAirport = -1;
     m_onGround = onRunway;
     m_camera = m_position - m_forward * 65 + up * 22;
 }
@@ -47,8 +53,7 @@ void Player::Update(float delta, HWND window, const WorldGenerator &world)
     input.roll = float(key('A') || key(VK_LEFT)) - float(key('D') || key(VK_RIGHT));
     input.throttle = float(key(VK_SHIFT)) - float(key(VK_CONTROL));
     input.brake = key(VK_SPACE);
-    input.reset = key('R');
-    input.runway = key('H');
+    input.refuel = key('E');
     Update(delta, input, world);
 }
 
@@ -65,8 +70,13 @@ void Player::Update(float delta, const PlayerInput &input, const WorldGenerator 
     m_homeDown = input.runway;
     float pitch = std::clamp(input.pitch, -1.f, 1.f), roll = std::clamp(input.roll, -1.f, 1.f);
     m_throttle = std::clamp(m_throttle + std::clamp(input.throttle, -1.f, 1.f) * dt * .3f, 0.f, 1.f);
-    m_fuel = std::max(0.f, m_fuel - m_throttle * dt * .012f);
-    if (m_fuel <= 0)
+    // Ctrl yerde gazı kesip fren uygular; havada yalnızca gazı azaltır.
+    // Ctrl cuts power and applies brakes on the ground; in flight it only reduces throttle.
+    m_braking = m_onGround && (input.brake || input.throttle < 0);
+    if (m_onGround && input.throttle < 0)
+        m_throttle = 0;
+    m_fuel.Burn(dt, m_throttle);
+    if (m_fuel.Percent() <= 0)
         m_throttle = 0;
     auto up = XMVector3Normalize(m_position);
     auto right = XMVector3Normalize(XMVector3Cross(up, m_forward));
@@ -84,8 +94,8 @@ void Player::Update(float delta, const PlayerInput &input, const WorldGenerator 
     float climb = XMVectorGetX(XMVector3Dot(m_forward, up));
     float drag = m_onGround ? 1.2f : 4.f;
     m_speed = std::clamp(m_speed + (m_throttle * 22 - drag - m_speed * .065f - climb * 9.81f) * dt, 0.f, 230.f);
-    if (m_onGround && input.brake)
-        m_speed = std::max(0.f, m_speed - 25.f * dt);
+    if (m_braking)
+        m_speed = std::max(0.f, m_speed - 35.f * dt);
     // Düşük hızda kaldırma azalır; burun yukarıda olsa da uçak irtifa kaybeder.
     // Low airspeed reduces lift, so the aircraft sinks even with the nose raised.
     float sink = m_onGround ? 0.f : std::max(0.f, 65.f - m_speed) * .9f;
@@ -107,5 +117,7 @@ void Player::Update(float delta, const PlayerInput &input, const WorldGenerator 
     }
     else if (climb > .03f && m_speed > 55.f)
         m_onGround = false;
+    m_serviceAirport = Airport::RefuelZone(m_position, m_onGround, m_speed, m_throttle, world.Seed());
+    m_refueling = input.refuel && m_serviceAirport >= 0 && m_fuel.Fill(dt);
     m_camera = XMVectorLerp(m_camera, m_position - m_forward * 65 + newUp * 22, 1 - std::exp(-dt * 5));
 }

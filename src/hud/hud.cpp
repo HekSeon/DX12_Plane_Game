@@ -199,4 +199,77 @@ void Hud::Build(const Game &game, unsigned width, unsigned height, const HudAtla
     std::snprintf(buffer, sizeof(buffer), "%.0f%%", player.Throttle() * 100);
     Text(buffer, cx, ty - 36 * s, 42 * s, white, atlas, true);
     Text("THROTTLE", cx, ty + 12 * s, 15 * s, white, atlas, true);
+
+    // Meydan seçimi ve yakıt bilgisi uçuş verilerinden bağımsız panellerde kalır.
+    // Keep airport navigation and fuel information in separate flight panels.
+    float fx = width - margin - 224 * s;
+    Panel(fx, margin, 224 * s, 118 * s, 8 * s, shadow);
+    Text("FUEL", fx + 14 * s, margin + 9 * s, 18 * s, white, atlas);
+    XMFLOAT4 fuelColor = player.Fuel() < 25 ? XMFLOAT4{1, .38f, .16f, 1} : XMFLOAT4{.4f, 1, .72f, 1};
+    std::snprintf(buffer, sizeof(buffer), "%.0f%%", player.Fuel());
+    Text(buffer, fx + 150 * s, margin + 8 * s, 24 * s, fuelColor, atlas);
+    Quad(fx + 14 * s, margin + 45 * s, 196 * s, 8 * s, {1, 1, 1, .18f});
+    Quad(fx + 14 * s, margin + 45 * s, 196 * s * player.Fuel() / 100, 8 * s, fuelColor);
+    if (player.Refueling())
+        std::snprintf(buffer, sizeof(buffer), "REFUELING...");
+    else if (player.FuelServiceAirport() >= 0)
+        std::snprintf(buffer, sizeof(buffer), player.Fuel() >= 99.9f ? "FUEL FULL" : "HOLD E TO REFUEL");
+    else
+        std::snprintf(buffer, sizeof(buffer), "EST. RANGE %.1f km",
+                      player.Fuel() / (FuelTank::FullThrottleBurn * .65f) * .1f);
+    Text(buffer, fx + 14 * s, margin + 65 * s, 16 * s, white, atlas);
+    Text(player.Braking() ? "GROUND BRAKE" : "CTRL: BRAKE  E: REFUEL", fx + 14 * s, margin + 92 * s, 12 * s, faint,
+         atlas);
+
+    float ny = height - margin - 154 * s;
+    Panel(margin, ny, 280 * s, 154 * s, 8 * s, shadow);
+    std::snprintf(buffer, sizeof(buffer), "FLIGHT %u: LAND AT %s", game.CompletedFlights() + 1,
+                  Airport::Name(game.TargetAirport()));
+    Text(buffer, margin + 14 * s, ny + 9 * s, 16 * s, white, atlas);
+    for (int airport = 0; airport < Airport::Count; ++airport)
+    {
+        bool selected = airport == game.TargetAirport();
+        std::snprintf(buffer, sizeof(buffer), "%s %s   %.1f km", selected ? ">" : " ", Airport::Name(airport),
+                      Airport::Distance(player.Position(), airport, game.World().Seed()) / 1000);
+        Text(buffer, margin + 14 * s, ny + (39 + 27 * airport) * s, 19 * s,
+             selected ? XMFLOAT4{1, .78f, .3f, 1} : white, atlas);
+    }
+    float bearing = game.TargetBearing();
+    float degrees = std::abs(bearing) * 180 / XM_PI;
+    if (degrees < 5)
+        std::snprintf(buffer, sizeof(buffer), "TARGET STRAIGHT AHEAD");
+    else
+        std::snprintf(buffer, sizeof(buffer), "%s %.0f DEG", bearing < 0 ? "TURN LEFT" : "TURN RIGHT", degrees);
+    Text(buffer, margin + 14 * s, ny + 100 * s, 16 * s, white, atlas);
+    Text("LAND + STOP IN TARGET F BAY", margin + 14 * s, ny + 130 * s, 12 * s, faint, atlas);
+    if (game.ArrivalNotice())
+    {
+        std::snprintf(buffer, sizeof(buffer), "FLIGHT %u COMPLETE - NEXT: %s", game.CompletedFlights(),
+                      Airport::Name(game.TargetAirport()));
+        Text(buffer, center, 105 * s, 18 * s, {.4f, 1, .72f, 1}, atlas, true);
+    }
+
+    auto view = XMMatrixLookAtLH(player.Camera(), player.Position() + player.Forward() * 25,
+                                 XMVector3Normalize(player.Position()));
+    auto projection = XMMatrixPerspectiveFovLH(XM_PIDIV4, float(width) / height, 1, 35000);
+    for (int airport = 0; airport < Airport::Count; ++airport)
+    {
+        auto point = XMVectorSetW(Airport::Center(airport, game.World().Seed()) * (WorldGenerator::Radius + 75), 1);
+        auto clip = XMVector4Transform(point, view * projection);
+        float w = XMVectorGetW(clip);
+        if (w <= 0)
+            continue;
+        float x = XMVectorGetX(clip) / w, y = XMVectorGetY(clip) / w;
+        if (std::abs(x) > .85f || std::abs(y) > .7f)
+            continue;
+        float px = (x * .5f + .5f) * width, py = (.5f - y * .5f) * height;
+        XMFLOAT4 marker = airport == game.TargetAirport() ? XMFLOAT4{1, .78f, .3f, 1} : faint;
+        Line(px, py - 8 * s, px + 8 * s, py, s, marker);
+        Line(px + 8 * s, py, px, py + 8 * s, s, marker);
+        Line(px, py + 8 * s, px - 8 * s, py, s, marker);
+        Line(px - 8 * s, py, px, py - 8 * s, s, marker);
+        std::snprintf(buffer, sizeof(buffer), "%s %.1f km", Airport::Name(airport),
+                      Airport::Distance(player.Position(), airport, game.World().Seed()) / 1000);
+        Text(buffer, px, py + 12 * s, 14 * s, marker, atlas, true);
+    }
 }

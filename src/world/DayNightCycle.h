@@ -14,6 +14,8 @@ class DayNightCycle
 {
   public:
     static constexpr float DayLengthSeconds = 600.f;
+    static constexpr float SunriseHour = 6.f;
+    static constexpr float SunsetHour = 18.f;
     void Update(float dt);
     void AdvanceHours(float hours);
     void SetHour(float hour);

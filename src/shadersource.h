@@ -120,7 +120,9 @@ float3 StarSample(float2 uv,float2 imageSize)
 }
 float4 SkyPS(SkyPixel input) : SV_TARGET
 {
-    float3 ray=normalize(input.ray),up=normalize(eye.xyz);
+    // Işık ve gökyüzü aynı yerel ufku kullanır; takip kamerası saati kaydırmaz.
+    // Lighting and sky share the same local horizon; the chase camera cannot shift time.
+    float3 ray=normalize(input.ray),up=normalize(model[1].xyz);
     float elevation=dot(ray,up),day=sunDirection.w;
     float sunHeight=dot(up,sunDirection.xyz);
     float twilight=exp(-pow(sunHeight/.19,2));
@@ -140,7 +142,7 @@ float4 SkyPS(SkyPixel input) : SV_TARGET
     float alignment=dot(ray,sunDirection.xyz);
     float disc=smoothstep(.99955,.99985,alignment);
     float halo=exp((alignment-1)*110)*.3;
-    float visible=smoothstep(-.04,.03,sunHeight);
+    float visible=smoothstep(0,.03,sunHeight);
     sky+=(disc+halo)*lerp(float3(1,.32,.06),float3(1,.96,.78),saturate(sunHeight*3))*visible;
     return float4(saturate(sky),1);
 }

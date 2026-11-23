@@ -83,7 +83,7 @@ loop. `Game` owns the player, world generation, fog and airport. `Player` handle
 controls, movement, ground contact and the chase camera. `Window` handles native messages and resize events. `RendererFactory` creates the
 single DirectX 12 implementation through `IRenderer`. `Model` reads static OBJ geometry.
 Shader source lives in `shadersource.h`. The project has no test target or DX11 backend.
-The executable uses a console entry point like the reference project; errors go to stderr.
+The executable uses the Windows GUI subsystem and starts without a console window. Startup errors appear in a message box.
 
 The renderer waits for each GPU frame for a simple resource lifetime model.
 Future work: building collisions, terrain LOD and richer flight physics.
@@ -209,3 +209,15 @@ Hold E while parked at idle in a fuel bay to replenish the tank. The distance li
 keeps both airport legs within the existing fuel budget, including approach reserves.
 
 Latest build: `build/routes/Release/DX12PlaneGame.exe`.
+## Clock-based daylight rule
+
+The HUD clock is the single time reference at every airport and player position:
+06:00 sunrise, 12:00 solar noon, 18:00 sunset, and night from 18:00 through 06:00.
+The sun direction is constructed in the player's local horizon frame. Random airport
+placement and flying around the planet no longer shift sunrise to another HUD hour.
+The sky uses that same horizon instead of the chase camera's slightly offset up axis.
+Sunlight strength is zero outside the daytime interval; readable night ambient light,
+night.jpg and brief warm dawn/dusk transitions are preserved. The ten-minute full-day
+cycle and T time-skip remain unchanged.
+
+Latest build: `build/dayclock/Release/DX12PlaneGame.exe`.

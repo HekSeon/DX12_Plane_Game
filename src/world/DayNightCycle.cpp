@@ -36,12 +36,20 @@ void DayNightCycle::Update(float dt)
 }
 Daylight DayNightCycle::Evaluate(FXMVECTOR position) const
 {
-    float angle = (m_hour - 6.f) * XM_2PI / 24.f;
-    auto sun = XMVectorSet(std::cos(angle) * .6f, std::sin(angle), std::cos(angle) * .8f, 0);
+    // HUD saati yerel ufku belirler; gezegen üzerindeki konum gün doğumunu kaydırmaz.
+    // The HUD clock defines the local horizon; planet position cannot shift sunrise.
+    bool daytime = m_hour >= SunriseHour && m_hour < SunsetHour;
+    float nightHours = 24.f - (SunsetHour - SunriseHour);
+    float elapsedNight = m_hour >= SunsetHour ? m_hour - SunsetHour : m_hour + 24.f - SunsetHour;
+    float angle = daytime ? XM_PI * (m_hour - SunriseHour) / (SunsetHour - SunriseHour)
+                          : XM_PI + XM_PI * elapsedNight / nightHours;
     auto up = XMVector3Normalize(position);
-    float elevation = XMVectorGetX(XMVector3Dot(up, sun));
-    float day = Smooth(-.12f, .18f, elevation);
-    float strength = Smooth(-.06f, .2f, elevation);
+    auto reference = std::abs(XMVectorGetZ(up)) > .98f ? XMVectorSet(1, 0, 0, 0) : XMVectorSet(0, 0, 1, 0);
+    auto east = XMVector3Normalize(XMVector3Cross(up, reference));
+    float elevation = std::sin(angle);
+    auto sun = XMVector3Normalize(east * std::cos(angle) + up * elevation);
+    float day = daytime ? Smooth(0.f, .15f, elevation) : 0.f;
+    float strength = daytime ? Smooth(0.f, .2f, elevation) : 0.f;
     float twilight = std::exp(-std::pow(elevation / .19f, 2.f));
     auto color = Mix({1.f, .29f, .055f, 1}, {1.f, .96f, .86f, 1}, Smooth(.03f, .4f, elevation));
     Daylight result;

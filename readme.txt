@@ -1,6 +1,10 @@
 ﻿DX12 Plane Game
 ================
 
+紹介動画
+--------
+YouTube: https://youtu.be/_8e0fRk8Uqw
+
 概要
 ----
 DirectX 12 を使用した、三人称視点のフライトゲームです。
